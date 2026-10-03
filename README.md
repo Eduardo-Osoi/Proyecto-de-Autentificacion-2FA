@@ -21,7 +21,6 @@ Plataforma centralizada de autenticación y autorización para portafolio: 2FA c
 └─────────────────────────────────────────────────┘
 ```
 
-No hay multi-tenancy — el foco es el protocolo de identidad en sí, no la arquitectura de negocio (para eso ya está [[facturia]]).
 
 ## Requisitos
 
@@ -92,22 +91,7 @@ pytest -v
 
 Cobertura: los 6 vectores oficiales del RFC 6238 para TOTP, tolerancia de reloj, registro/login, el flujo completo de activación y login con 2FA (incluyendo que un login temporal no se puede reusar dos veces), RBAC (quién puede crear roles, asignar permisos, que revocar un rol de verdad quita el permiso tras refrescar), y el flujo SSO completo de principio a fin (incluyendo que el `state` no se puede reutilizar y que loguearte por SSO con el correo de una cuenta existente la vincula en vez de duplicarla).
 
-A diferencia de otros proyectos de este portafolio, esta vez las 33 pruebas pasaron sin encontrar ningún bug en el camino — el diseño se validó contra los vectores del RFC antes de construir el resto encima, lo cual probablemente ayudó.
+Pruebas de test
+ 33 pruebas pasaron sin encontrar ningún bug en el camino — el diseño se validó contra los vectores del RFC antes de construir el resto encima, lo cual probablemente ayudó.
 
 ## Despliegue (Vercel para el frontend, Render para el backend)
-
-Mismo esquema que en los otros proyectos de este portafolio: el backend necesita un proceso siempre corriendo (Render), el frontend es estático (Vercel).
-
-1. Sube el repo a GitHub.
-2. En Render: "New +" → "Blueprint" → apunta al repo (usa `render.yaml`). Cuando termine, copia la URL (Render la expone también como `RENDER_EXTERNAL_URL`, que `backend_base_url` ya lee automáticamente).
-3. En el servicio de Render, agrega la variable de entorno `BASTION_FRONTEND_URL` con la URL que te vaya a dar Vercel (la puedes actualizar después de desplegar el frontend si aún no la tienes).
-4. En Vercel: "Add New" → "Project" → importa el repo, root directory `frontend`. Agrega `VITE_API_BASE_URL` con la URL de Render.
-5. Despliega. Si actualizaste `BASTION_FRONTEND_URL` después, redeploy el backend en Render para que tome el cambio (lo necesita para que los redirects de SSO apunten al lugar correcto).
-
-## Limitaciones conocidas (para ser honesto en entrevista)
-
-- El proveedor SSO es simulado. Conectar un proveedor real (Google, Microsoft, Auth0) implicaría cambiar las URLs base y usar sus endpoints `/authorize`, `/token` y `/userinfo` reales — la lógica del lado de Bastion (manejo de `state`, intercambio de código, resolución de usuario) no cambiaría nada.
-- Los permisos en el JWT quedan obsoletos si cambias un rol hasta que el usuario refresque o vuelva a loguearse (ver arriba). Un sistema con revocación instantánea necesitaría permisos consultados en cada request, o una lista de tokens invalidados.
-- No hay recuperación de contraseña ("forgot password") ni verificación de correo al registrarse.
-- El intercambio SSO código→token no pasa por una llamada HTTP real (ver arriba) — es una simplificación deliberada para que las pruebas sean rápidas y deterministas, no un descuido.
-- No hay backup codes para 2FA: si pierdes el dispositivo con la app autenticadora, no hay forma de recuperar el acceso salvo acceso directo a la base de datos.
